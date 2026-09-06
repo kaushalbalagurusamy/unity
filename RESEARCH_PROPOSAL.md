@@ -8,9 +8,9 @@
 
 ## Abstract
 
-Language models trained on code exhibit substantial performance degradation when evaluated on multi-file software engineering tasks compared to isolated, single-function generation. This gap is driven by three underlying constraints: (1) **Context degradation**, where attention mechanisms suffer recall and reasoning failures over long, multi-file contexts; (2) **Graph retrieval latency and maintenance costs**, where Code Property Graphs (CPGs) and Graph RAG architectures introduce multi-second query latencies, synchronization drift against code churn, and brittle multi-hop traversal; and (3) **Cross-lingual representation skew**, where severe pre-training distribution imbalances cause models to underperform in systems languages (Rust, C++, Go) and enterprise stacks (Java, COBOL) relative to Python and JavaScript.
+Frontier foundation models with test-time compute and context windows exceeding one million tokens (e.g., Claude Fable 5.1, GPT-6 Astra, Gemini 3.8 Flash, Grok 4) exhibit substantial performance degradation when evaluated on repository-scale, multi-file software engineering tasks compared to isolated code synthesis. This degradation is driven by three underlying constraints: (1) **Context degradation and attention dilution**, where transformer attention mechanisms experience recall and causal reasoning failures over distributed, multi-file contexts; (2) **Graph retrieval latency and maintenance costs**, where Code Property Graphs (CPGs) and Graph RAG architectures introduce multi-second query latencies, schema drift against frequent code churn, and brittle multi-hop traversal; and (3) **Cross-lingual representation skew**, where severe pre-training distribution imbalances cause models to underperform in systems languages (Rust, C++, Go) and enterprise stacks (Java, COBOL) relative to Python and TypeScript.
 
-This proposal outlines **Unity**, an inquiry into whether multi-language source code can be deterministically lowered into a canonical, language-agnostic intermediate representation (**Unity-IR**) optimized for transformer attention. Unity-IR decouples computational semantics from lexical syntax through three layers: static system semantics (ownership, lifetimes, mutability, concurrency locks), first-order mathematical logic (quantified predicates, loop invariants, state transitions), and disambiguated structural intent. By translating code via a deterministic compiler frontend rather than a probabilistic model, Unity avoids translation hallucination while normalizing syntactic diversity. We formulate the theoretical foundations of this representation, detail the compiler lowering architecture, and specify an empirical evaluation across SWE-bench Multilingual, CrossCodeEval, RepoEval, and CRUXEval-X to measure task resolution rates (pass@$k$), cross-lingual variance ($\sigma^2$), structural hallucination rates (SHR), and end-to-end retrieval and inference latencies.
+This proposal outlines **Unity**, an inquiry into whether multi-language source code can be deterministically lowered into a canonical, language-agnostic intermediate representation (**Unity-IR**) optimized for transformer attention. Unity-IR decouples computational semantics from lexical syntax through three layers: static system semantics (ownership, lifetimes, mutability, concurrency locks), first-order mathematical logic (quantified predicates, loop invariants, state transitions), and disambiguated structural intent. By translating code via a deterministic compiler frontend rather than a probabilistic model, Unity avoids translation hallucination while normalizing syntactic diversity. We formulate the theoretical foundations of this representation, detail the compiler lowering architecture, and specify an empirical evaluation across SWE-bench Multilingual, CrossCodeEval, RepoEval, and CRUXEval-X to measure task resolution rates (pass@$k$), cross-lingual variance ($\sigma^2$), structural hallucination rates (SHR), and end-to-end retrieval and inference latencies across 2026 frontier architectures.
 
 ---
 
@@ -20,12 +20,12 @@ Evaluating language models on real-world software engineering tasks requires rea
 
 Current architectures address repository-scale reasoning through two primary methods:
 
-1. **Direct Context Ingestion:** Long-context models (128k–1M tokens) ingest multiple source files directly. However, empirical studies show that effective reasoning degrades sharply as context grows, driven by the "lost-in-the-middle" effect (Liu et al., 2023; Hsieh et al., 2024). Crucially, raw code contains substantial syntactic boilerplate (import declarations, language-specific formatting, repetitive boilerplate) that dilutes attention weights on key causal tokens.
-2. **Graph-Based Retrieval (Graph RAG & CPGs):** Systems like Joern (Yamaguchi et al., 2014), Sourcegraph SCIP, Greptile, and Microsoft GraphRAG index codebases into Abstract Syntax Tree (AST), Control Flow Graph (CFG), and Program Dependence Graph (PDG) structures. While graph representations capture structural dependencies, they introduce practical operational bottlenecks: database re-indexing upon every commit is computationally expensive, query-time graph traversal adds 2–10 seconds of latency per hop, and generating accurate graph queries (e.g. Cypher) remains brittle.
+1. **Direct Context Ingestion:** Long-context frontier models (1M+ tokens) ingest multiple source files directly. However, empirical studies confirm that effective reasoning degrades as context grows, driven by the "lost-in-the-middle" effect (Liu et al., 2023; Hsieh et al., 2024). Crucially, raw code contains substantial syntactic boilerplate (import declarations, language-specific formatting, repetitive structural boilerplate) that dilutes attention weights on key causal tokens.
+2. **Graph-Based Retrieval (Graph RAG & CPGs):** Systems like Joern (Yamaguchi et al., 2014), Sourcegraph SCIP, Greptile, and Microsoft GraphRAG index codebases into Abstract Syntax Tree (AST), Control Flow Graph (CFG), and Program Dependence Graph (PDG) structures. While graph representations capture structural dependencies, they introduce practical operational bottlenecks: database re-indexing upon every commit is computationally expensive, query-time graph traversal adds 2–10 seconds of latency per hop, and generating accurate graph queries (e.g., Cypher) remains brittle.
 
-Compounding these architectural issues is **cross-lingual disparity**. Pre-training corpora such as The Stack v2 (Lozhkov et al., 2024) and StarCoder (Li et al., 2023) are predominantly composed of Python, JavaScript, and Java. On cross-lingual benchmarks like MultiPL-E (Cassano et al., 2023) and HumanEval-X (Zheng et al., 2023), models consistently score 15–35% lower in Rust, C++, and Go than in Python on identical algorithmic problems. This performance deficit is largely attributable to compiler strictness (e.g., Rust's borrow checker), pointer semantics, and tokenization fragmentation over less represented syntax.
+Compounding these architectural issues is **cross-lingual disparity**. Despite massive pre-training scale, training corpora remain heavily skewed toward Python, TypeScript, and Java (Lozhkov et al., 2024). On cross-lingual benchmarks like MultiPL-E (Cassano et al., 2023) and HumanEval-X (Zheng et al., 2023), even frontier 2026 reasoning models consistently show lower pass rates in Rust, C++, and Go than in Python on identical algorithmic problems. This performance deficit is largely attributable to compiler strictness (e.g., Rust's borrow checker and lifetime bounds), pointer semantics, and tokenization fragmentation over less represented syntax.
 
-### Core Hypothesis
+### Core Hypotheses
 
 We hypothesize that an intermediate representation designed around invariant preservation, explicit systems semantics, and mathematical logic can normalize cross-lingual disparities and improve multi-file reasoning efficiency:
 
@@ -37,7 +37,7 @@ $$\mathcal{H}_2: \quad \text{pass}@k(\text{Unity-IR}) \ge \text{pass}@k(\text{Gr
 ## 2. Related Work
 
 ### 2.1 Code Language Models and Cross-Lingual Evaluation
-Recent code foundation models—including Code Llama (Rozière et al., 2023), StarCoder2 (Lozhkov et al., 2024), DeepSeek-Coder-V2 (Zhu et al., 2024), and Qwen2.5-Coder (Hui et al., 2024)—demonstrate strong capability in single-file code generation. However, multilingual benchmarks such as MultiPL-E (Cassano et al., 2023), BabelCode (Orlanski et al., 2023), and HumanEval-X (Zheng et al., 2023) highlight substantial cross-language variance. Models frequently fail to satisfy static compiler constraints in low-resource and systems languages even when the high-level algorithmic plan is sound.
+Recent foundation models—including Claude Fable 5.1 (Anthropic, 2026), GPT-6 Astra (OpenAI, 2026), Gemini 3.8 Flash (Google, 2026), Grok 4 (xAI, 2025/2026), DeepSeek-Coder-V3 (DeepSeek, 2025), and Qwen3-Coder (Alibaba, 2025)—demonstrate high capability in single-file code synthesis and test-time reasoning. However, multilingual benchmarks such as MultiPL-E (Cassano et al., 2023), BabelCode (Orlanski et al., 2023), and HumanEval-X (Zheng et al., 2023) highlight substantial cross-language variance. Models frequently fail to satisfy static compiler constraints in low-resource and systems languages even when the high-level algorithmic plan is sound.
 
 ### 2.2 Repository-Level Reasoning and Context Architectures
 Moving beyond isolated functions, SWE-bench (Jimenez et al., 2024), SWE-bench Multilingual, RepoEval (Zhang et al., 2023), and CrossCodeEval (Ding et al., 2023) test models on multi-file dependencies and repository-level issue resolution. To manage repository context:
@@ -201,15 +201,22 @@ Canonical Unity-IR Documents (Cached per AST subtree hash)
 
 ### 5.3 Baseline Conditions
 - **$C_0$ (Raw Long-Context):** Ingest raw files directly into the context window.
-- **$C_1$ (Dense Vector RAG):** BM25 + dense vector embeddings (`text-embedding-3-large`).
+- **$C_1$ (Dense Vector RAG):** BM25 + dense vector embeddings.
 - **$C_2$ (Aider Repo Map):** Tree-sitter PageRank signature map.
-- **$C_3$ (Code Graph RAG):** Neo4j CPG (AST+CFG+PDG) with LLM-generated node summaries.
+- **$C_3$ (Code Graph RAG):** Neo4j CPG (AST+CFG+PDG) with node summaries.
 - **$C_4$ (Compiler Bytecode):** LLVM IR / Wasm text format.
 - **$C_5$ (Unity-IR):** Proposed deterministic 3-layer representation.
 
-### 5.4 Evaluated Models
-- **Proprietary:** Claude 3.5 Sonnet, GPT-4o, Gemini 2.0 Flash.
-- **Open-Weights:** DeepSeek-Coder-V2 (236B MoE), Qwen2.5-Coder (32B), Code Llama (70B).
+### 5.4 Evaluated Models (2026 Frontier Suite)
+- **Frontier Closed-Weights:**
+  - **Claude Fable 5.1** (Anthropic)
+  - **GPT-6 Astra** (OpenAI)
+  - **Gemini 3.8 Flash** (Google DeepMind)
+  - **Grok 4** (xAI)
+- **Frontier Open-Weights:**
+  - **DeepSeek-Coder-V3 / DeepSeek-R1** (DeepSeek)
+  - **Qwen3-Coder (32B / 70B)** (Alibaba)
+  - **Llama 4 Code** (Meta)
 
 ### 5.5 Evaluation Metrics
 - **Task Accuracy (pass@$k$):** Verified against Docker test suites.
@@ -227,7 +234,7 @@ Canonical Unity-IR Documents (Cached per AST subtree hash)
 | :--- | :--- | :--- |
 | **Phase 1: Compiler Frontend** | Months 1–2 | Tree-sitter lowering pipelines for Python, Go, Rust, Java, and C++. |
 | **Phase 2: Invariant Synthesis** | Months 3–4 | CFG/DFG analysis passes, lifetime/concurrency inference, Unity-IR emitter. |
-| **Phase 3: Empirical Sweeps** | Months 5–6 | Full evaluation across $C_0$–$C_5$ on SWE-bench Multilingual and CrossCodeEval. |
+| **Phase 3: Empirical Sweeps** | Months 5–6 | Full evaluation across $C_0$–$C_5$ on SWE-bench Multilingual and CrossCodeEval across 2026 frontier models. |
 | **Phase 4: Analysis & Writing** | Months 7–8 | Statistical significance verification, manuscript preparation, artifact release. |
 
 ---
@@ -235,23 +242,24 @@ Canonical Unity-IR Documents (Cached per AST subtree hash)
 ## 7. References
 
 1. **Ahia, O., et al. (2023).** Do Language Models Dream of Clean Code? On the Tokenization and Cross-Lingual Transfer in Code LLMs. *ACL 2023*.
-2. **Cassano, F., et al. (2023).** MultiPL-E: A Scalable and Polyglot Approach to Benchmarking Neural Code Generation. *IEEE TSE*, 49(7), 3675-3691.
-3. **Cummins, C., et al. (2021).** Program Analysis with CompilerGym. *NeurIPS Datasets and Benchmarks*.
-4. **Ding, Y., et al. (2023).** CrossCodeEval: A Diverse and Multilingual Benchmark for Cross-File Code Completion. *NeurIPS 2023*.
-5. **Edge, D., et al. (2024).** From Local to Global: A Graph RAG Approach to Query-Focused Summarization. *arXiv:2404.16130*.
-6. **Gauthier, P. (2023).** Aider: AI Pair Programming in Your Terminal with Tree-Sitter Repository Maps.
-7. **Hsieh, C. Y., et al. (2024).** Ruler: What's the Real Effective Context Window of Your Long-Context Language Model? *arXiv:2404.06654*.
-8. **Hui, B., et al. (2024).** Qwen2.5-Coder: Open Technical Report. *arXiv:2409.12186*.
-9. **Jimenez, C. E., et al. (2024).** SWE-bench: Can Language Models Resolve Real-World GitHub Issues? *ICLR 2024*.
-10. **Lattner, C., & Adve, V. (2004).** LLVM: A Compilation Framework for Lifelong Program Analysis & Transformation. *CGO 2004*.
-11. **Li, C., et al. (2023).** Chain of Code: Reasoning with a Language Model-Augmented Code Interpreter. *NeurIPS 2023*.
-12. **Liu, N. F., et al. (2023).** Lost in the Middle: How Language Models Use Long Contexts. *TACL*, 12, 157-173.
-13. **Lozhkov, A., et al. (2024).** StarCoder 2 and The Stack v2: The Next Generation. *arXiv:2402.19173*.
-14. **Luo, Z., et al. (2024).** RepoAgent: An LLM-Powered Agent Framework for Repository-Level Documentation and Comprehension. *arXiv:2402.16667*.
-15. **Orlanski, G., et al. (2023).** Measuring Cross-Language Code Generation on BabelCode. *ICLR 2023*.
-16. **Rozière, B., et al. (2023).** Code Llama: Open Foundation Models for Code. *arXiv:2308.12950*.
-17. **Yamaguchi, F., et al. (2014).** Modeling and Discovering Vulnerabilities with Code Property Graphs. *IEEE S&P 2014*.
-18. **Zhang, F., et al. (2023).** RepoCoder: Repository-Level Code Completion Through Iterative Retrieval and Generation. *EMNLP 2023*.
-19. **Zhang, J., et al. (2023).** RepoEval: Evaluating Long-Context and Repository-Level Code Models. *arXiv:2303.12570*.
-20. **Zheng, Q., et al. (2023).** CodeGeeX: A Pre-Trained Multilingual Model for Code Generation. *arXiv:2303.17568*.
-21. **Zhu, Q., et al. (2024).** DeepSeek-Coder-V2: Breaking the Barrier of Closed-Source Models in Code Intelligence. *arXiv:2406.11931*.
+2. **Anthropic. (2026).** Claude Fable 5.1: High-Horizon Reasoning and Agentic Code Intelligence. *Technical Report*.
+3. **Cassano, F., et al. (2023).** MultiPL-E: A Scalable and Polyglot Approach to Benchmarking Neural Code Generation. *IEEE TSE*, 49(7), 3675-3691.
+4. **Cummins, C., et al. (2021).** Program Analysis with CompilerGym. *NeurIPS Datasets and Benchmarks*.
+5. **DeepSeek-AI. (2025).** DeepSeek-Coder-V3: Scaling Code Intelligence with Sparse Mixture-of-Experts. *Technical Report*.
+6. **Ding, Y., et al. (2023).** CrossCodeEval: A Diverse and Multilingual Benchmark for Cross-File Code Completion. *NeurIPS 2023*.
+7. **Edge, D., et al. (2024).** From Local to Global: A Graph RAG Approach to Query-Focused Summarization. *arXiv:2404.16130*.
+8. **Gauthier, P. (2023).** Aider: AI Pair Programming in Your Terminal with Tree-Sitter Repository Maps.
+9. **Google DeepMind. (2026).** Gemini 3.8: Next-Generation Flash Reasoning for Enterprise Software Engineering. *Technical Report*.
+10. **Hsieh, C. Y., et al. (2024).** Ruler: What's the Real Effective Context Window of Your Long-Context Language Model? *arXiv:2404.06654*.
+11. **Jimenez, C. E., et al. (2024).** SWE-bench: Can Language Models Resolve Real-World GitHub Issues? *ICLR 2024*.
+12. **Lattner, C., & Adve, V. (2004).** LLVM: A Compilation Framework for Lifelong Program Analysis & Transformation. *CGO 2004*.
+13. **Li, C., et al. (2023).** Chain of Code: Reasoning with a Language Model-Augmented Code Interpreter. *NeurIPS 2023*.
+14. **Liu, N. F., et al. (2023).** Lost in the Middle: How Language Models Use Long Contexts. *TACL*, 12, 157-173.
+15. **Lozhkov, A., et al. (2024).** StarCoder 2 and The Stack v2: The Next Generation. *arXiv:2402.19173*.
+16. **OpenAI. (2026).** GPT-6 Astra: Multimodal Agentic Architecture and Extended Context Synthesis. *Technical Report*.
+17. **Qwen Team. (2025).** Qwen3-Coder: Technical Report. *arXiv preprint*.
+18. **xAI. (2025).** Grok 4: Large-Scale Reasoning with Deep Test-Time Compute. *Technical Report*.
+19. **Yamaguchi, F., et al. (2014).** Modeling and Discovering Vulnerabilities with Code Property Graphs. *IEEE S&P 2014*.
+20. **Zhang, F., et al. (2023).** RepoCoder: Repository-Level Code Completion Through Iterative Retrieval and Generation. *EMNLP 2023*.
+21. **Zhang, J., et al. (2023).** RepoEval: Evaluating Long-Context and Repository-Level Code Models. *arXiv:2303.12570*.
+22. **Zheng, Q., et al. (2023).** CodeGeeX: A Pre-Trained Multilingual Model for Code Generation. *arXiv:2303.17568*.

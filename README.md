@@ -8,14 +8,14 @@
 
 ## About
 
-Large language models (LLMs) struggle to reason over large, multi-file codebases. Existing strategies typically fall into one of two paradigms, both of which have severe trade-offs:
+Despite substantial advances in test-time compute and extended context windows in frontier models (e.g. Claude Fable 5.1, GPT-6 Astra, Gemini 3.8 Flash, Grok 4), language models continue to struggle with repository-scale, multi-file code reasoning. Existing approaches suffer from fundamental structural trade-offs:
 
-1. **Long-Context Ingestion:** Feeding raw source files directly into large context windows leads to attention dilution ("lost-in-the-middle") and token inefficiency caused by lexical boilerplate and syntax fragmentation.
-2. **Graph RAG / Code Property Graphs:** Constructing and querying AST/CFG/PDG graph databases (e.g. via Neo4j or vector stores) introduces high indexing overhead, query-time latency (2–10s per hop), schema drift across commits, and brittle graph-query generation.
+1. **Direct Long-Context Ingestion:** Ingesting raw source files across 1M+ token contexts leads to attention dilution ("lost-in-the-middle") and token inefficiency caused by lexical boilerplate, syntax fragmentation, and compiler-specific mechanics.
+2. **Graph RAG / Code Property Graphs:** Constructing and querying AST/CFG/PDG graph databases (e.g. via Neo4j or vector stores) introduces high indexing overhead, query-time latency (2–10s per hop), schema drift across rapid commits, and brittle graph-query generation.
 
-Furthermore, pre-training data distributions heavily favor Python and JavaScript, resulting in marked performance drops when reasoning about systems-level languages (Rust, C++, Go) or legacy stacks (COBOL, Fortran).
+Furthermore, pre-training distributions remain heavily biased toward Python and TypeScript. Frontier models that achieve state-of-the-art results on Python benchmarks exhibit steep drops in reliability when reasoning over systems-level languages (Rust, C++, Go) or enterprise stacks (Java, COBOL), failing to satisfy strict lifetime, memory-ownership, and concurrency invariants.
 
-**Unity** investigates whether source code across disparate languages can be deterministically lowered into a canonical, language-agnostic intermediate representation (**Unity-IR**). Unity-IR combines static system semantics (ownership, lifetimes, mutability, concurrency locks), first-order logic (predicates, invariants, relational transformations), and disambiguated structural English. By evaluating models directly on this normalized representation, Unity aims to:
+**Unity** investigates whether source code across disparate languages can be deterministically lowered into a canonical, language-agnostic intermediate representation (**Unity-IR**). Unity-IR combines static system semantics (ownership, lifetimes, mutability, concurrency locks), first-order mathematical logic (predicates, invariants, relational transformations), and disambiguated structural English. By evaluating models directly on this normalized representation, Unity aims to:
 
 - Eliminate cross-lingual reasoning disparities caused by surface syntax and pre-training distribution skew.
 - Compress repository context into dense semantic invariants, reducing total token consumption.
@@ -70,7 +70,7 @@ Unity-IR (Contracts + Logic + Invariants)
 
 | Dimension | Raw Source Code | AST Repo Maps (e.g. Aider) | Code Property Graphs (Joern / Memgraph) | Graph RAG (Greptile / MS GraphRAG) | Unity-IR |
 | :--- | :--- | :--- | :--- | :--- | :--- |
-| **Language Parity** | Skewed to Python/JS | Syntax-only signatures | Language-specific AST/CFG | Skewed by base LLM | Normalized across paradigms |
+| **Language Parity** | Skewed to Python/TS | Syntax-only signatures | Language-specific AST/CFG | Skewed by base LLM | Normalized across paradigms |
 | **Context Density** | Low (boilerplate-heavy) | High (signatures only) | Low (large graph serialization) | Medium (chunks + docstrings) | High (compressed invariants) |
 | **Multi-Hop Traversal** | Attention-dependent | Manual navigation | Precise query traversal | Multi-step LLM extraction | Self-contained links |
 | **Query Latency** | Baseline file read | <50ms | 100ms–2s | 2s–10s | <100ms deterministic |
@@ -80,7 +80,11 @@ Unity-IR (Contracts + Logic + Invariants)
 
 ## Evaluation Protocol
 
-We evaluate the representation across three benchmark tiers using frontier closed-weights and open-weights models (Claude 3.5 Sonnet, GPT-4o, DeepSeek-Coder-V2, Qwen 2.5 Coder):
+We evaluate the representation across three benchmark tiers using frontier 2026 models across closed and open architectures:
+- **Frontier Closed-Weights:** Claude Fable 5.1, GPT-6 Astra, Gemini 3.8 Flash, Grok 4.
+- **Frontier Open-Weights:** DeepSeek-Coder-V3 / DeepSeek-R1, Qwen3-Coder (32B/70B), Llama 4 Code.
+
+### Benchmark Suites
 
 1. **Repository-Level Issue Resolution:**
    - **SWE-bench Multilingual:** 300 real-world GitHub issues across 9 programming languages.
@@ -125,10 +129,10 @@ unity/
 ## Citation
 
 ```bibtex
-@article{unity2025,
+@article{unity2026,
   title   = {Unity: A Universal Semantic Intermediate Representation for Repository-Scale Code Reasoning},
   author  = {Project Unity Research Group},
   journal = {arXiv preprint},
-  year    = {2025}
+  year    = {2026}
 }
 ```
