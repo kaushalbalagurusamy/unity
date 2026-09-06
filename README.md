@@ -23,6 +23,19 @@ Furthermore, pre-training distributions remain heavily biased toward Python and 
 
 ---
 
+## The Core Paradigm: Parity Over Panopticon Telemetry
+
+The dominant engineering pattern in 2025–2026 attempts to mitigate LLM unreliability through extrinsic surveillance: wrapping models in extensive synthetic test generators, runtime eBPF sandboxes, and multi-tier agent review guardrails. 
+
+This approach introduces severe systemic costs:
+- **Tautological Test Debt:** LLM-generated test harnesses scale proportionally with code generation, creating brittle mock pipelines and linear maintenance debt.
+- **Cognitive Throttling:** Forcing models into localized micro-edits prevents high-order reasoning across repository-scale causal chains.
+- **Reviewer Asymmetry:** Code generation takes seconds, but verifying non-local concurrency, memory, and authorization invariants causes human review fatigue, allowing critical vulnerabilities to slip into production.
+
+**Unity replaces extrinsic surveillance with intrinsic semantic parity.** By deterministically lowering code into explicit state invariants, ownership lifecycles, and mathematical relations, correctness becomes a structural property of the representation. Reviewers and models audit the canonical semantic delta (\Delta S) rather than hundreds of lines of syntactic boilerplate.
+
+---
+
 ## Representation Design
 
 Unity-IR decouples computational semantics from language-specific syntax via a three-layer schema:
