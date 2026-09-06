@@ -1,39 +1,134 @@
-# Unity: Universal Semantic Intermediate Representation for Codebase Intelligence
+# Unity
 
-[![Target Venue: NeurIPS / ICLR](https://img.shields.io/badge/Target-NeurIPS%20%2F%20ICLR%202025%2F2026-blue.svg)](./RESEARCH_PROPOSAL.md)
-[![License: Apache 2.0](https://img.shields.io/badge/License-Apache%202.0-green.svg)](./LICENSE)
-[![Status: Research Inquiry](https://img.shields.io/badge/Status-Formal%20Proposal%20Stage-orange.svg)](./RESEARCH_PROPOSAL.md)
+**A Universal Semantic Intermediate Representation for Repository-Scale Code Reasoning**
 
-> **Project Unity** investigates a universal, invariant-preserving intermediate representation designed specifically for transformer attention mechanisms. By deterministically lowering heterogeneous source code into a canonical 3-Layer Semantic Intermediate Representation (Unity-IR), Unity eliminates syntactic noise, mitigates cross-lingual performance disparities (e.g., Python vs. Rust/C++/Go), and replaces slow, brittle Graph RAG pipelines with self-contained, high-density semantic contexts.
+[**Research Proposal**](RESEARCH_PROPOSAL.md) | [**Design Specification**](#representation-design) | [**Evaluation Protocol**](#evaluation-protocol) | [**BibTeX**](#citation)
 
 ---
 
-## 📄 Full Research Proposal
+## About
 
-The formal research proposal for scientific inquiry targeting the **AI/ML Track of NeurIPS / ICLR** is available in:
-👉 **[RESEARCH_PROPOSAL.md](./RESEARCH_PROPOSAL.md)**
+Large language models (LLMs) struggle to reason over large, multi-file codebases. Existing strategies typically fall into one of two paradigms, both of which have severe trade-offs:
 
----
+1. **Long-Context Ingestion:** Feeding raw source files directly into large context windows leads to attention dilution ("lost-in-the-middle") and token inefficiency caused by lexical boilerplate and syntax fragmentation.
+2. **Graph RAG / Code Property Graphs:** Constructing and querying AST/CFG/PDG graph databases (e.g. via Neo4j or vector stores) introduces high indexing overhead, query-time latency (2–10s per hop), schema drift across commits, and brittle graph-query generation.
 
-## 🎯 The Core Thesis
+Furthermore, pre-training data distributions heavily favor Python and JavaScript, resulting in marked performance drops when reasoning about systems-level languages (Rust, C++, Go) or legacy stacks (COBOL, Fortran).
 
-Current LLMs used in software engineering face a critical trilemma:
-1. **Reasoning Horizon Attenuation:** Long-context attention mechanisms experience severe recall degradation ("lost-in-the-middle") over multi-file causal chains.
-2. **Graph RAG Maintenance & Latency Tax:** Graph RAG and Code Property Graphs (CPGs) introduce multi-second retrieval latency, high maintenance costs, and brittle multi-hop queries.
-3. **Cross-Lingual Disparity:** Massive pre-training data imbalances result in steep drops in accuracy when evaluating models on systems languages (Rust, C++, Go) or legacy stacks (COBOL) compared to Python.
+**Unity** investigates whether source code across disparate languages can be deterministically lowered into a canonical, language-agnostic intermediate representation (**Unity-IR**). Unity-IR combines static system semantics (ownership, lifetimes, mutability, concurrency locks), first-order logic (predicates, invariants, relational transformations), and disambiguated structural English. By evaluating models directly on this normalized representation, Unity aims to:
 
-**Unity's Solution:** A deterministic lowering compiler that translates source code across diverse languages into **Unity-IR**, composed of:
-* **Layer 1 (Contract & Systems Semantics):** Concurrency isolation, memory ownership/lifetimes, and side-effect purity derived via static analysis.
-* **Layer 2 (Algorithmic Core):** First-order mathematical logic, set transformations, and state-transition invariants.
-* **Layer 3 (Causal Intent):** Disambiguated Controlled Natural Language (CNL) and explicit cross-file symbol hyperlinks.
+- Eliminate cross-lingual reasoning disparities caused by surface syntax and pre-training distribution skew.
+- Compress repository context into dense semantic invariants, reducing total token consumption.
+- Enable sub-second cross-file dependency resolution without external graph database queries.
 
 ---
 
-## 🔬 Scientific Inquiry & Benchmarking
+## Representation Design
 
-Project Unity evaluates its hypotheses across three rigorous benchmark tiers:
-* **Tier 1 (Real-World Issues):** SWE-bench Multilingual (300 tasks across 9 languages) & SWE-bench Java.
-* **Tier 2 (Multi-File Dependencies):** CrossCodeEval & RepoEval.
-* **Tier 3 (Execution Simulation & Invariants):** CRUXEval-X & Custom Concurrency Invariant Suite.
+Unity-IR decouples computational semantics from language-specific syntax via a three-layer schema:
 
-Read the complete problem formulation, architectural specifications, empirical baselines, and scholarly citations in **[RESEARCH_PROPOSAL.md](./RESEARCH_PROPOSAL.md)**.
+```
++-------------------------------------------------------------------------+
+| Layer 1: Contract & Systems Semantics (Deterministic Static Analysis)   |
+| • Canonical Symbol IDs (@pkg.module.Class.method)                       |
+| • Purity: pure | impure(IO) | impure(StateMutation:target)              |
+| • Concurrency: exclusive_lock(m) | lock_free | atomic | csp_channel     |
+| • Resource Bounds: mutable_borrow(&mut T) | shared_borrow(&T) | owned   |
++-------------------------------------------------------------------------+
+| Layer 2: Algorithmic Core (Mathematical Logic & Relations)              |
+| • Preconditions (P) and Postconditions (Q)                              |
+| • Universal (∀) and Existential (∃) Quantifiers over Collections        |
+| • Relational Transformations (Map, Filter, Fold)                        |
+| • State Transition Deltas: S_{t+1} = S_t ⊕ {k ↦ v}                      |
++-------------------------------------------------------------------------+
+| Layer 3: Causal Topology & Controlled Natural Language                  |
+| • Standardized EBNF Intent Statements                                   |
+| • Explicit Hyperlinked Dependencies to Inter-File Symbols               |
++-------------------------------------------------------------------------+
+```
+
+### Deterministic Lowering Pipeline
+
+To prevent translation-phase hallucinations, Unity rejects probabilistic LLM-based translation. Instead, lowering is performed by a deterministic compiler pass:
+
+```
+Source Code (Python / Rust / Go / C++ / Java)
+  │
+  ▼  Tree-sitter AST
+Generic Abstract Syntax Tree (Normalized AST)
+  │
+  ▼  Static Program Analysis (CFG / DFG / Abstract Interpretation)
+Type & Invariant Extraction
+  │
+  ▼  Deterministic Emitter
+Unity-IR (Contracts + Logic + Invariants)
+```
+
+---
+
+## Comparison with Existing Approaches
+
+| Dimension | Raw Source Code | AST Repo Maps (e.g. Aider) | Code Property Graphs (Joern / Memgraph) | Graph RAG (Greptile / MS GraphRAG) | Unity-IR |
+| :--- | :--- | :--- | :--- | :--- | :--- |
+| **Language Parity** | Skewed to Python/JS | Syntax-only signatures | Language-specific AST/CFG | Skewed by base LLM | Normalized across paradigms |
+| **Context Density** | Low (boilerplate-heavy) | High (signatures only) | Low (large graph serialization) | Medium (chunks + docstrings) | High (compressed invariants) |
+| **Multi-Hop Traversal** | Attention-dependent | Manual navigation | Precise query traversal | Multi-step LLM extraction | Self-contained links |
+| **Query Latency** | Baseline file read | <50ms | 100ms–2s | 2s–10s | <100ms deterministic |
+| **Index Maintenance** | None | Incremental re-parse | High (graph DB re-indexing) | High (re-summarization) | Local AST cache |
+
+---
+
+## Evaluation Protocol
+
+We evaluate the representation across three benchmark tiers using frontier closed-weights and open-weights models (Claude 3.5 Sonnet, GPT-4o, DeepSeek-Coder-V2, Qwen 2.5 Coder):
+
+1. **Repository-Level Issue Resolution:**
+   - **SWE-bench Multilingual:** 300 real-world GitHub issues across 9 programming languages.
+   - **SWE-bench Java:** 91 enterprise-level patch-and-verify tasks.
+2. **Cross-File Context & Dependency Resolution:**
+   - **CrossCodeEval:** Multi-file dependency completion in Python, Java, TypeScript, and C#.
+   - **RepoEval:** Cross-file line, API, and function completion.
+3. **Execution Simulation & Invariants:**
+   - **CRUXEval-X:** Cross-lingual input/output state simulation.
+   - **Concurrency Invariant Suite:** 100 multi-threaded synchronization tasks testing race and deadlock detection across 5–15 file boundaries.
+
+### Primary Metrics
+
+- **Task Accuracy:** pass@1 and pass@5 on full Docker test harnesses.
+- **Cross-Lingual Disparity ($\sigma^2_{	ext{lang}}$):** Variance of accuracy scores across evaluated programming languages.
+- **Structural Hallucination Rate (SHR):** Proportion of invented or invalid symbol references in model-generated reasoning traces.
+- **Token Efficiency Ratio (TER):** Input token reduction of Unity-IR relative to raw source code.
+- **Latency Profile:** End-to-end indexing, retrieval, and inference times.
+
+For complete theoretical derivations, formal specifications, and experimental setups, see [**RESEARCH_PROPOSAL.md**](RESEARCH_PROPOSAL.md).
+
+---
+
+## Project Structure
+
+```
+unity/
+├── README.md              # Project overview and specifications
+├── RESEARCH_PROPOSAL.md   # Formal scientific research proposal
+├── grammar/               # Unity-IR EBNF grammar specifications (planned)
+├── compiler/              # Tree-sitter lowering frontends (planned)
+│   ├── python/
+│   ├── rust/
+│   ├── go/
+│   └── cpp/
+├── analysis/              # CFG/DFG and invariant extraction passes (planned)
+└── benchmarks/            # Evaluation harnesses and dataset runners (planned)
+```
+
+---
+
+## Citation
+
+```bibtex
+@article{unity2025,
+  title   = {Unity: A Universal Semantic Intermediate Representation for Repository-Scale Code Reasoning},
+  author  = {Project Unity Research Group},
+  journal = {arXiv preprint},
+  year    = {2025}
+}
+```
