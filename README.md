@@ -2,7 +2,7 @@
 
 **A Universal Semantic Intermediate Representation for Repository-Scale Code Reasoning**
 
-[**Research Proposal**](RESEARCH_PROPOSAL.md) | [**Design Specification**](#representation-design) | [**Evaluation Protocol**](#evaluation-protocol) | [**BibTeX**](#citation)
+[**Research Proposal**](RESEARCH_PROPOSAL.md) | [**Master Roadmap**](ROADMAP.md) | [**Design Specification**](#representation-design) | [**Toolchain & Dependencies**](#toolchain--core-dependencies) | [**Evaluation Protocol**](#evaluation-protocol) | [**BibTeX**](#citation)
 
 ---
 
@@ -118,6 +118,33 @@ We evaluate the representation across three benchmark tiers using frontier 2026 
 - **Latency Profile:** End-to-end indexing, retrieval, and inference times.
 
 For complete theoretical derivations, formal specifications, and experimental setups, see [**RESEARCH_PROPOSAL.md**](RESEARCH_PROPOSAL.md).
+
+---
+
+## Toolchain & Core Dependencies
+
+Unity rejects probabilistic translation models in favor of deterministic compiler passes, formal grammar engines, and SMT solvers:
+
+| Package / Tool | Purpose | Role in Project Unity |
+| :--- | :--- | :--- |
+| **`tree-sitter`**<br>`tree-sitter-python`<br>`tree-sitter-go` | Concrete Syntax Tree (CST) Frontends | High-speed, incremental AST parsing for Python and Go, extracting control structures without executing bytecode. |
+| **`lark`** | Formal EBNF Grammar Engine | Parses and validates `grammar/unity_ir.ebnf`, ensuring emitted `.uir` files strictly adhere to the 3-Layer schema. |
+| **`deal`** | Design-by-Contract (DbC) | Canonical Python contract definitions (`@deal.pre`, `@deal.ensure`, `@deal.pure`) used for reference anchors and AST extraction. |
+| **`z3-solver`** | Microsoft Z3 SMT Prover | Validates that extracted pre/post-conditions preserve algebraic invariants across cross-lingual lowerings. |
+| **`networkx`** | Causal Topology & DAGs | Analyzes hyperlinked inter-file symbol dependency graphs and computes topological sort order. |
+| **`hypothesis`** | Invariant Property Fuzzer | Executes property-based fuzz testing against compiler lowering outputs to detect invariant drift. |
+| **`pytest`** | Deterministic Test Suite | Drives compiler regression tests and AST parity verification. |
+
+### Environment Setup
+
+```bash
+# Set up isolated virtual environment with Python 3.12+
+uv venv --python 3.12 .venv
+source .venv/bin/activate
+
+# Install compiler dependencies
+uv pip install -e .
+```
 
 ---
 
