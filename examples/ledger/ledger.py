@@ -41,7 +41,7 @@ class Ledger:
         with self.mu:
             self.balances[account_id] = initial_balance
 
-    @deal.pre(lambda self, account_id: account_id in self.balances)
+    @deal.pre(lambda self, account_id: account_id in self.balances, exception=NotFoundError)
     def get_balance(self, account_id: str) -> int:
         """Query account balance under exclusive lock."""
         with self.mu:
@@ -49,7 +49,8 @@ class Ledger:
                 raise NotFoundError(f"Account '{account_id}' not found")
             return self.balances[account_id]
 
-    @deal.pre(lambda self, account_id, amount: amount > 0)
+    @deal.pre(lambda self, account_id, amount: amount > 0, exception=InvalidAmountError)
+    @deal.pre(lambda self, account_id, amount: account_id in self.balances, exception=NotFoundError)
     @deal.ensure(lambda self, account_id, amount, result: result == self.balances[account_id])
     @deal.raises(NotFoundError, InvalidAmountError)
     def deposit(self, account_id: str, amount: int) -> int:
@@ -64,7 +65,12 @@ class Ledger:
             self.balances[account_id] = new_balance
             return new_balance
 
-    @deal.pre(lambda self, account_id, amount: amount > 0)
+    @deal.pre(lambda self, account_id, amount: amount > 0, exception=InvalidAmountError)
+    @deal.pre(lambda self, account_id, amount: account_id in self.balances, exception=NotFoundError)
+    @deal.pre(
+        lambda self, account_id, amount: self.balances[account_id] >= amount,
+        exception=InsufficientFundsError,
+    )
     @deal.ensure(lambda self, account_id, amount, result: self.balances[account_id] >= 0)
     @deal.raises(NotFoundError, InvalidAmountError, InsufficientFundsError)
     def withdraw(self, account_id: str, amount: int) -> int:
