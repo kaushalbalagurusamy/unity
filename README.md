@@ -2,6 +2,9 @@
 
 **A Universal Semantic Intermediate Representation for Repository-Scale Code Reasoning**
 
+[![CI](https://github.com/kaushalbalagurusamy/unity/actions/workflows/ci.yml/badge.svg)](https://github.com/kaushalbalagurusamy/unity/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+
 [**Research Proposal**](RESEARCH_PROPOSAL.md) | [**Master Roadmap**](ROADMAP.md) | [**Design Specification**](#representation-design) | [**Toolchain & Dependencies**](#toolchain--core-dependencies) | [**Evaluation Protocol**](#evaluation-protocol) | [**BibTeX**](#citation)
 
 ---
