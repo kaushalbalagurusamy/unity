@@ -18,7 +18,10 @@ from compiler import (
     CanonicalEmitter,
     SemanticDeltaEngine,
     DeltaSeverity,
+    VerificationStatus,
     SMTContractProver,
+    CausalGraphResolver,
+    CausalLink,
 )
 
 ROOT_DIR = Path(__file__).parent.parent
@@ -115,13 +118,58 @@ def test_delta_engine_smt_prover_catches_counterexample() -> None:
     # 1. Unsafe strengthening: (amount > 0) does NOT entail (amount > 50)
     res_unsafe = prover.verify_implication("amount > 0", "amount > 50")
     assert not res_unsafe.implication_holds
+    assert res_unsafe.status == VerificationStatus.COUNTEREXAMPLE_FOUND
     assert res_unsafe.counterexample is not None
     assert "amount" in res_unsafe.counterexample
 
     # 2. Safe relaxation: (amount > 0) DOES entail (amount >= 0)
     res_safe = prover.verify_implication("amount > 0", "amount >= 0")
     assert res_safe.implication_holds
+    assert res_safe.status == VerificationStatus.DECIDABLE_SMT_PROVED
     assert res_safe.counterexample is None
+
+
+def test_delta_engine_smt_prover_handles_unmodeled_predicates_soundly() -> None:
+    """
+    Verify that predicates outside the decidable theory (QF_LIA) fall back
+    soundly to conservative syntactic equality rather than halting or hallucinating.
+    """
+    prover = SMTContractProver()
+
+    # 1. Syntactic identity outside QF_LIA holds conservatively
+    res_ident = prover.verify_implication("isValidId(account_id)", "isValidId(account_id)")
+    assert res_ident.implication_holds
+    assert res_ident.status == VerificationStatus.CONSERVATIVE_SYNTACTIC_CHECK
+    assert res_ident.counterexample is None
+
+    # 2. Syntactic inequality outside QF_LIA is soundly rejected
+    res_diff = prover.verify_implication("isValidId(account_id)", "isUUID(account_id)")
+    assert not res_diff.implication_holds
+    assert res_diff.status == VerificationStatus.CONSERVATIVE_SYNTACTIC_CHECK
+    assert res_diff.counterexample is not None
+    assert "Conservative fallback" in res_diff.counterexample
+
+
+def test_decoupled_causal_graph_resolver() -> None:
+    """
+    Verify that cross-file causal topology resolution is decoupled from
+    single-file Tree-sitter parsing and accepts external resolvers (e.g. SCIP / LSP indexers).
+    """
+    class MockSCIPCausalResolver:
+        def resolve_called_by(self, symbol_id: str, method_name: str) -> list[CausalLink]:
+            return [
+                CausalLink(kind="CALLED_BY", target_symbol=f"@external.service.{method_name}"),
+                CausalLink(kind="CALLED_BY", target_symbol="@audit.logger.record"),
+            ]
+
+    resolver = MockSCIPCausalResolver()
+    py_module = extract_uast(PYTHON_ANCHOR_PATH, causal_resolver=resolver)
+
+    deposit_sym = py_module.get_symbol("@ledger.Ledger.deposit")
+    assert deposit_sym is not None
+    assert len(deposit_sym.causal_topology) == 2
+    assert deposit_sym.causal_topology[0].target_symbol == "@external.service.deposit"
+    assert deposit_sym.causal_topology[1].target_symbol == "@audit.logger.record"
 
 
 def test_delta_engine_detects_precondition_mutation_in_module() -> None:

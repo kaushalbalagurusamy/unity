@@ -29,12 +29,24 @@ class DeltaSeverity(str, Enum):
     IDENTICAL = "IDENTICAL"                # No semantic change
 
 
+class VerificationStatus(str, Enum):
+    """
+    Formal verification classification for contract predicates.
+    Enforces decidability boundaries: SMT reasoning is bounded to decidable
+    theories (e.g., Quantifier-Free Linear Integer Arithmetic, QF_LIA).
+    """
+    DECIDABLE_SMT_PROVED = "DECIDABLE_SMT_PROVED"          # SMT solver verified logical entailment within decidable theory
+    COUNTEREXAMPLE_FOUND = "COUNTEREXAMPLE_FOUND"          # SMT solver found concrete falsifying counterexample
+    CONSERVATIVE_SYNTACTIC_CHECK = "CONSERVATIVE_SYNTACTIC" # Predicate outside decidable theory; conservative syntactic fallback
+
+
 @dataclass
 class PreconditionSMTResult:
     """Outcome of SMT formal verification between two contract predicates."""
     old_expr: str
     new_expr: str
     implication_holds: bool
+    status: VerificationStatus
     counterexample: Optional[str] = None
 
 
@@ -109,6 +121,16 @@ class SMTContractProver:
     """
     Formal SMT Logic Engine utilizing Z3 to check logical entailment:
     P_old => P_new  (proving invariant preservation or counterexample discovery)
+
+    Scope & Computability Boundary:
+    Operates strictly on the decidable fragment of Quantifier-Free Linear Integer
+    Arithmetic (QF_LIA) over contract preconditions and state bounds. Per Rice's
+    theorem, synthesizing arbitrary non-trivial semantic invariants from untyped,
+    unannotated Turing-complete code is undecidable. Unity solves the practical
+    verification problem by verifying differential contractual drift: checking
+    whether declared or lowered contract boundaries hold across transitions.
+    Expressions outside the decidable theory fall back soundly to
+    CONSERVATIVE_SYNTACTIC_CHECK, guaranteeing termination without unbounded solving.
     """
 
     def parse_simple_predicate(self, expr: str, vars_map: Dict[str, z3.ArithRef]) -> Optional[z3.BoolRef]:
@@ -149,7 +171,8 @@ class SMTContractProver:
     def verify_implication(self, old_expr: str, new_expr: str) -> PreconditionSMTResult:
         """
         Verify if old_expr => new_expr holds for all inputs using Z3 SMT solver.
-        If it does not hold, extracts the concrete counterexample.
+        If it does not hold within QF_LIA, extracts the concrete counterexample.
+        If predicates fall outside the decidable theory, performs conservative syntactic checking.
         """
         vars_map: Dict[str, z3.ArithRef] = {}
         z3_old = self.parse_simple_predicate(old_expr, vars_map)
@@ -161,7 +184,8 @@ class SMTContractProver:
                 old_expr=old_expr,
                 new_expr=new_expr,
                 implication_holds=is_equal,
-                counterexample=None if is_equal else "Syntax inequality (unmodeled predicate)",
+                status=VerificationStatus.CONSERVATIVE_SYNTACTIC_CHECK,
+                counterexample=None if is_equal else "Conservative fallback: syntax inequality outside decidable theory (QF_LIA)",
             )
 
         solver = z3.Solver()
@@ -172,6 +196,7 @@ class SMTContractProver:
                 old_expr=old_expr,
                 new_expr=new_expr,
                 implication_holds=True,
+                status=VerificationStatus.DECIDABLE_SMT_PROVED,
                 counterexample=None,
             )
 
@@ -181,6 +206,7 @@ class SMTContractProver:
             old_expr=old_expr,
             new_expr=new_expr,
             implication_holds=False,
+            status=VerificationStatus.COUNTEREXAMPLE_FOUND,
             counterexample=cex_str or "Counterexample found",
         )
 
@@ -279,12 +305,12 @@ class SemanticDeltaEngine:
             delta.is_one_way_door = True
             delta.severity = DeltaSeverity.ONE_WAY_DOOR
             delta.messages.append(
-                f"SMT INVARIANT VIOLATION on {pid}: {old_expr} does NOT entail {new_expr}! "
+                f"SMT INVARIANT VIOLATION on {pid} [{smt_res.status.value}]: {old_expr} does NOT entail {new_expr}! "
                 f"(CEX: {smt_res.counterexample})"
             )
         else:
             delta.messages.append(
-                f"Precondition {pid} verified relaxed by SMT: {old_expr} => {new_expr}"
+                f"Precondition {pid} verified relaxed [{smt_res.status.value}]: {old_expr} => {new_expr}"
             )
             if delta.severity == DeltaSeverity.IDENTICAL:
                 delta.severity = DeltaSeverity.CONTRACT_SHIFT

@@ -5,7 +5,7 @@
 [![CI](https://github.com/kaushalbalagurusamy/unity/actions/workflows/ci.yml/badge.svg)](https://github.com/kaushalbalagurusamy/unity/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-[**Research Proposal**](RESEARCH_PROPOSAL.md) | [**Master Roadmap**](ROADMAP.md) | [**Performance & Scale**](docs/PERFORMANCE_AND_SCALABILITY.md) | [**Empirical Benchmarks**](docs/BENCHMARKS.md) | [**Design Specification**](#representation-design) | [**Toolchain & Dependencies**](#toolchain--core-dependencies) | [**Evaluation Protocol**](#evaluation-protocol) | [**BibTeX**](#citation)
+[**Research Proposal**](RESEARCH_PROPOSAL.md) | [**Master Roadmap**](ROADMAP.md) | [**Theoretical Foundations**](docs/THEORETICAL_FOUNDATIONS.md) | [**Performance & Scale**](docs/PERFORMANCE_AND_SCALABILITY.md) | [**Empirical Benchmarks**](docs/BENCHMARKS.md) | [**Design Specification**](#representation-design) | [**Toolchain & Dependencies**](#toolchain--core-dependencies) | [**Evaluation Protocol**](#evaluation-protocol) | [**BibTeX**](#citation)
 
 ---
 

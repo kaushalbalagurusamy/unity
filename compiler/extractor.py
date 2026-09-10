@@ -6,7 +6,7 @@ Translates Tree-sitter CSTs for Python and Go into canonical 3-Layer UAST (Unity
 from __future__ import annotations
 import re
 from abc import ABC, abstractmethod
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Protocol, runtime_checkable
 from tree_sitter import Node
 
 from .parser import ParsedSource, SourceLanguage, UnifiedParser
@@ -47,6 +47,34 @@ CAUSAL_MAP = {
     "deposit": "@api.handlers.execute_deposit",
     "withdraw": "@api.handlers.execute_withdrawal",
 }
+
+
+@runtime_checkable
+class CausalGraphResolver(Protocol):
+    """
+    Protocol for resolving inter-procedural causal topology and call graphs.
+    Decouples single-file AST/CST parsing (Tree-sitter) from whole-repository
+    causal analysis (which interfaces with build systems, SCIP, or LSP indexers).
+    """
+
+    def resolve_called_by(self, symbol_id: str, method_name: str) -> List[CausalLink]:
+        """Resolve all callers of a given symbol."""
+        ...
+
+
+class LexicalCausalResolver:
+    """
+    Default single-module lexical resolver.
+    Maps local symbol identifiers to declared architectural call patterns.
+    Can be seamlessly substituted with external SCIP/LSP indexers for multi-repo dependency graphs.
+    """
+
+    def __init__(self, causal_map: Optional[Dict[str, str]] = None) -> None:
+        self.causal_map = causal_map or CAUSAL_MAP
+
+    def resolve_called_by(self, symbol_id: str, method_name: str) -> List[CausalLink]:
+        target = self.causal_map.get(method_name, "@api.default")
+        return [CausalLink(kind="CALLED_BY", target_symbol=target)]
 
 
 def order_errors(errors: List[str]) -> List[str]:
@@ -183,8 +211,13 @@ def build_postconditions(method_name: str) -> List[Postcondition]:
 class BaseLanguageExtractor(ABC):
     """Abstract interface for language-specific semantic extraction."""
 
-    def __init__(self, parsed_source: ParsedSource) -> None:
+    def __init__(
+        self,
+        parsed_source: ParsedSource,
+        causal_resolver: Optional[CausalGraphResolver] = None,
+    ) -> None:
         self.parsed = parsed_source
+        self.causal_resolver = causal_resolver or LexicalCausalResolver()
 
     @abstractmethod
     def extract_module(self) -> UnityModule:
@@ -322,7 +355,7 @@ class PythonExtractor(BaseLanguageExtractor):
             preconditions=build_preconditions(params, method_name),
             execution_logic=build_execution_steps(method_name),
             postconditions=build_postconditions(method_name),
-            causal_topology=[CausalLink(kind="CALLED_BY", target_symbol=CAUSAL_MAP.get(method_name, "@api.default"))],
+            causal_topology=self.causal_resolver.resolve_called_by(symbol_id, method_name),
         )
 
 
@@ -401,21 +434,22 @@ class GoExtractor(BaseLanguageExtractor):
             preconditions=build_preconditions(params, method_name),
             execution_logic=build_execution_steps(method_name),
             postconditions=build_postconditions(method_name),
-            causal_topology=[CausalLink(kind="CALLED_BY", target_symbol=CAUSAL_MAP.get(method_name, "@api.default"))],
+            causal_topology=self.causal_resolver.resolve_called_by(symbol_id, method_name),
         )
 
 
 class SemanticExtractor:
     """Unified facade for extracting canonical UASTs across languages."""
 
-    def __init__(self) -> None:
+    def __init__(self, causal_resolver: Optional[CausalGraphResolver] = None) -> None:
         self.parser = UnifiedParser()
+        self.causal_resolver = causal_resolver or LexicalCausalResolver()
 
     def extract(self, parsed_source: ParsedSource) -> UnityModule:
         if parsed_source.language == SourceLanguage.PYTHON:
-            return PythonExtractor(parsed_source).extract_module()
+            return PythonExtractor(parsed_source, causal_resolver=self.causal_resolver).extract_module()
         elif parsed_source.language == SourceLanguage.GO:
-            return GoExtractor(parsed_source).extract_module()
+            return GoExtractor(parsed_source, causal_resolver=self.causal_resolver).extract_module()
         raise ValueError(f"Unsupported language: {parsed_source.language}")
 
     def extract_from_file(self, filepath: str) -> UnityModule:
