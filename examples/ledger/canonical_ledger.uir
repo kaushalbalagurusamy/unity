@@ -1,0 +1,85 @@
+SYMBOL: @ledger.Ledger.get_balance
+CONTRACT:
+  PARAMS: (account_id: Str)
+  RETURNS: Result<Int64, Error[NotFound]>
+  SYSTEMS: [concurrency: exclusive_lock(self.mu), purity: pure]
+
+PRECONDITIONS:
+  P1: isValidId(account_id)
+  P2: account_id in self.balances
+
+EXECUTION_LOGIC:
+  1. ACQUIRE: exclusive_lock(self.mu)
+  2. QUERY: current = self.balances[account_id]
+     ASSERT: current != None ELSE THROW NotFound
+  3. RELEASE: exclusive_lock(self.mu)
+  4. RETURN: current
+
+POSTCONDITIONS:
+  Q1: RESULT == self.balances[account_id]
+
+CAUSAL_TOPOLOGY:
+  CALLED_BY: @api.handlers.get_account_balance
+
+
+SYMBOL: @ledger.Ledger.deposit
+CONTRACT:
+  PARAMS: (account_id: Str, amount: Int64)
+  RETURNS: Result<Int64, Error[NotFound | InvalidAmount]>
+  SYSTEMS: [concurrency: exclusive_lock(self.mu), purity: impure(StateMutation:self.balances)]
+
+PRECONDITIONS:
+  P1: isValidId(account_id)
+  P2: amount > 0
+  P3: account_id in self.balances
+
+EXECUTION_LOGIC:
+  1. EVALUATE: valid_amount = amount > 0
+     ASSERT: valid_amount == True ELSE THROW InvalidAmount
+  2. ACQUIRE: exclusive_lock(self.mu)
+  3. QUERY: current = self.balances[account_id]
+     ASSERT: current != None ELSE THROW NotFound
+  4. EVALUATE: proposed = current + amount
+  5. MUTATE: self.balances[account_id] := proposed
+  6. RELEASE: exclusive_lock(self.mu)
+  7. RETURN: proposed
+
+POSTCONDITIONS:
+  Q1: self.balances[account_id] == current + amount
+  Q2: RESULT == self.balances[account_id]
+
+CAUSAL_TOPOLOGY:
+  CALLED_BY: @api.handlers.execute_deposit
+
+
+SYMBOL: @ledger.Ledger.withdraw
+CONTRACT:
+  PARAMS: (account_id: Str, amount: Int64)
+  RETURNS: Result<Int64, Error[NotFound | InvalidAmount | InsufficientFunds]>
+  SYSTEMS: [concurrency: exclusive_lock(self.mu), purity: impure(StateMutation:self.balances)]
+
+PRECONDITIONS:
+  P1: isValidId(account_id)
+  P2: amount > 0
+  P3: account_id in self.balances
+  P4: self.balances[account_id] >= amount
+
+EXECUTION_LOGIC:
+  1. EVALUATE: valid_amount = amount > 0
+     ASSERT: valid_amount == True ELSE THROW InvalidAmount
+  2. ACQUIRE: exclusive_lock(self.mu)
+  3. QUERY: current = self.balances[account_id]
+     ASSERT: current != None ELSE THROW NotFound
+  4. EVALUATE: proposed = current - amount
+     ASSERT: proposed >= 0 ELSE THROW InsufficientFunds
+  5. MUTATE: self.balances[account_id] := proposed
+  6. RELEASE: exclusive_lock(self.mu)
+  7. RETURN: proposed
+
+POSTCONDITIONS:
+  Q1: self.balances[account_id] == current - amount
+  Q2: self.balances[account_id] >= 0
+  Q3: RESULT == self.balances[account_id]
+
+CAUSAL_TOPOLOGY:
+  CALLED_BY: @api.handlers.execute_withdrawal
