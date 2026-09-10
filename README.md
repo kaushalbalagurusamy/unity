@@ -11,31 +11,31 @@
 
 ## About
 
-Despite substantial advances in test-time compute and extended context windows in frontier models (e.g. Claude Fable 5.1, GPT-6 Astra, Gemini 3.8 Flash, Grok 4), language models continue to struggle with repository-scale, multi-file code reasoning. Existing approaches suffer from fundamental structural trade-offs:
+Despite substantial advances in test-time compute and extended context windows in modern foundation models, language models continue to struggle with repository-scale, multi-file code reasoning. Existing approaches suffer from fundamental structural trade-offs:
 
 1. **Direct Long-Context Ingestion:** Ingesting raw source files across 1M+ token contexts leads to attention dilution ("lost-in-the-middle") and token inefficiency caused by lexical boilerplate, syntax fragmentation, and compiler-specific mechanics.
 2. **Graph RAG / Code Property Graphs:** Constructing and querying AST/CFG/PDG graph databases (e.g. via Neo4j or vector stores) introduces high indexing overhead, query-time latency (2–10s per hop), schema drift across rapid commits, and brittle graph-query generation.
 
 Furthermore, pre-training distributions remain heavily biased toward Python and TypeScript. Frontier models that achieve state-of-the-art results on Python benchmarks exhibit steep drops in reliability when reasoning over systems-level languages (Rust, C++, Go) or enterprise stacks (Java, COBOL), failing to satisfy strict lifetime, memory-ownership, and concurrency invariants.
 
-**Unity** investigates whether source code across disparate languages can be deterministically lowered into a canonical, language-agnostic intermediate representation (**Unity-IR**). Unity-IR combines static system semantics (ownership, lifetimes, mutability, concurrency locks), first-order mathematical logic (predicates, invariants, relational transformations), and disambiguated structural English. By evaluating models directly on this normalized representation, Unity aims to:
+**Unity** investigates whether source code across disparate languages can be deterministically lowered into a canonical, language-agnostic intermediate representation (**Unity-IR**). Unity-IR combines static system semantics (ownership, lifetimes, mutability, concurrency locks), first-order mathematical logic (predicates, invariants, relational transformations), and disambiguated structural Controlled Natural Logic. By evaluating models directly on this normalized representation, Unity aims to:
 
 - Eliminate cross-lingual reasoning disparities caused by surface syntax and pre-training distribution skew.
-- Compress repository context into dense semantic invariants, reducing total token consumption.
+- Compress repository context into dense semantic invariants, reducing total token consumption and quadratic attention compute.
 - Enable sub-second cross-file dependency resolution without external graph database queries.
 
 ---
 
-## The Core Paradigm: Parity Over Panopticon Telemetry
+## Intrinsic Invariant Verification vs. Extrinsic Dynamic Monitoring
 
-The dominant engineering pattern in 2025–2026 attempts to mitigate LLM unreliability through extrinsic surveillance: wrapping models in extensive synthetic test generators, runtime eBPF sandboxes, and multi-tier agent review guardrails. 
+A pervasive challenge in agentic software engineering is the reliance on **extrinsic dynamic monitoring** to compensate for untrusted model generation. Because raw code generation lacks verifiable invariant guarantees, contemporary workflows encase models in heavy scaffolding: synthetic test generators, runtime sandboxes, and multi-tier agent review loops.
 
-This approach introduces severe systemic costs:
-- **Tautological Test Debt:** LLM-generated test harnesses scale proportionally with code generation, creating brittle mock pipelines and linear maintenance debt.
-- **Cognitive Throttling:** Forcing models into localized micro-edits prevents high-order reasoning across repository-scale causal chains.
-- **Reviewer Asymmetry:** Code generation takes seconds, but verifying non-local concurrency, memory, and authorization invariants causes human review fatigue, allowing critical vulnerabilities to slip into production.
+This operational paradigm introduces three systemic trade-offs:
+- **Specification Drift in Synthetic Test Generation:** As code generation volume scales, model-generated test harnesses frequently validate the model's own flawed assumptions, scaling maintenance overhead linearly with codebase volume.
+- **Global Invariant Preservation in Large-Scale Code Synthesis:** Restricting models to narrow, localized edits prevents reasoning systems from verifying global, multi-hop architectural invariants across repository boundaries.
+- **Human Review Asymmetries in Multi-File Refactoring:** While code generation occurs rapidly, verifying non-local memory safety, concurrency races, and authorization invariants across large diffs imposes severe cognitive load on human reviewers.
 
-**Unity replaces extrinsic surveillance with intrinsic semantic parity.** By deterministically lowering code into explicit state invariants, ownership lifecycles, and mathematical relations, correctness becomes a structural property of the representation. Reviewers and models audit the canonical semantic delta (\Delta S) rather than hundreds of lines of syntactic boilerplate.
+**Unity replaces extrinsic dynamic monitoring with intrinsic semantic verification.** By deterministically lowering code into explicit state invariants, ownership lifecycles, and mathematical relations, contract preservation becomes verifiable via automated decision procedures (Z3 SMT solver). Reviewers and models audit the **canonical semantic delta** ($\Delta \mathcal{S} = \mathcal{S}_{\text{post}} \ominus \mathcal{S}_{\text{pre}}$) over formal pre/post-conditions, isolating critical regressions into a decidable verification domain.
 
 ---
 
