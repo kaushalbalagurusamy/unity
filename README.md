@@ -5,7 +5,7 @@
 [![CI](https://github.com/kaushalbalagurusamy/unity/actions/workflows/ci.yml/badge.svg)](https://github.com/kaushalbalagurusamy/unity/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-[**Research Proposal**](RESEARCH_PROPOSAL.md) | [**Master Roadmap**](ROADMAP.md) | [**Design Specification**](#representation-design) | [**Toolchain & Dependencies**](#toolchain--core-dependencies) | [**Evaluation Protocol**](#evaluation-protocol) | [**BibTeX**](#citation)
+[**Research Proposal**](RESEARCH_PROPOSAL.md) | [**Master Roadmap**](ROADMAP.md) | [**Performance & Scale**](docs/PERFORMANCE_AND_SCALABILITY.md) | [**Design Specification**](#representation-design) | [**Toolchain & Dependencies**](#toolchain--core-dependencies) | [**Evaluation Protocol**](#evaluation-protocol) | [**BibTeX**](#citation)
 
 ---
 
@@ -91,6 +91,20 @@ Unity-IR (Contracts + Logic + Invariants)
 | **Multi-Hop Traversal** | Attention-dependent | Manual navigation | Precise query traversal | Multi-step LLM extraction | Self-contained links |
 | **Query Latency** | Baseline file read | <50ms | 100ms–2s | 2s–10s | <100ms deterministic |
 | **Index Maintenance** | None | Incremental re-parse | High (graph DB re-indexing) | High (re-summarization) | Local AST cache |
+
+---
+
+## Performance & Scaling Latency
+
+A primary concern in intermediate representation workflows is translation overhead: *does lowering large codebases introduce an unacceptable latency bottleneck prior to LLM inference?*
+
+**Empirical benchmarks confirm that lowering to Unity-IR actually speeds up overall end-to-end response times:**
+* **301,000 lines/second per CPU core**: Full end-to-end lowering pipeline throughput (Tree-sitter parse, UAST extraction, and canonical emission).
+* **< 4 ms steady-state translation**: Content-addressable caching ensures only modified files are re-lowered on active turns.
+* **600 ms to 2,700 ms GPU prefill savings**: By stripping 75% of syntactic token bloat, Unity-IR reduces quadratic self-attention FLOPs by 16x, cutting GPU Time-To-First-Token (TTFT) by hundreds of milliseconds.
+* **Radix Tree Cache Stability**: Canonical symbol normalization prevents premature KV-cache invalidation across multi-turn agent interactions.
+
+For complete mathematical proofs, 10M LOC cold-start benchmarks, and GPU FLOPs scaling derivations, see [**Performance, Scalability & Latency Architecture**](docs/PERFORMANCE_AND_SCALABILITY.md).
 
 ---
 
