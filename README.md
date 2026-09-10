@@ -5,7 +5,7 @@
 [![CI](https://github.com/kaushalbalagurusamy/unity/actions/workflows/ci.yml/badge.svg)](https://github.com/kaushalbalagurusamy/unity/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-[**Research Proposal**](RESEARCH_PROPOSAL.md) | [**Master Roadmap**](ROADMAP.md) | [**Performance & Scale**](docs/PERFORMANCE_AND_SCALABILITY.md) | [**Design Specification**](#representation-design) | [**Toolchain & Dependencies**](#toolchain--core-dependencies) | [**Evaluation Protocol**](#evaluation-protocol) | [**BibTeX**](#citation)
+[**Research Proposal**](RESEARCH_PROPOSAL.md) | [**Master Roadmap**](ROADMAP.md) | [**Performance & Scale**](docs/PERFORMANCE_AND_SCALABILITY.md) | [**Empirical Benchmarks**](docs/BENCHMARKS.md) | [**Design Specification**](#representation-design) | [**Toolchain & Dependencies**](#toolchain--core-dependencies) | [**Evaluation Protocol**](#evaluation-protocol) | [**BibTeX**](#citation)
 
 ---
 
@@ -104,7 +104,7 @@ A primary concern in intermediate representation workflows is translation overhe
 * **600 ms to 2,700 ms GPU prefill savings**: By stripping 75% of syntactic token bloat, Unity-IR reduces quadratic self-attention FLOPs by 16x, cutting GPU Time-To-First-Token (TTFT) by hundreds of milliseconds.
 * **Radix Tree Cache Stability**: Canonical symbol normalization prevents premature KV-cache invalidation across multi-turn agent interactions.
 
-For complete mathematical proofs, 10M LOC cold-start benchmarks, and GPU FLOPs scaling derivations, see [**Performance, Scalability & Latency Architecture**](docs/PERFORMANCE_AND_SCALABILITY.md).
+For complete mathematical proofs, 10M LOC cold-start benchmarks, and GPU FLOPs scaling derivations, see [**Performance, Scalability & Latency Architecture**](docs/PERFORMANCE_AND_SCALABILITY.md) and the live logarithmic test suite in [**Empirical Scalability & Throughput Benchmarks**](docs/BENCHMARKS.md).
 
 ---
 

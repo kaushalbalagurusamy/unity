@@ -1,0 +1,67 @@
+{
+  "timestamp": "2026-09-10T15:52:32Z",
+  "repositories": [
+    {
+      "repo": "hnet",
+      "total_files": 17,
+      "total_loc": 2740,
+      "total_bytes": 96002,
+      "syntax_errors": 0,
+      "parse_time_ms": 20.47,
+      "parse_throughput_loc_sec": 133864,
+      "peak_memory_mb": 0.54
+    },
+    {
+      "repo": "flask",
+      "total_files": 83,
+      "total_loc": 18345,
+      "total_bytes": 589437,
+      "syntax_errors": 0,
+      "parse_time_ms": 71.2,
+      "parse_throughput_loc_sec": 257643,
+      "peak_memory_mb": 3.13
+    },
+    {
+      "repo": "gin",
+      "total_files": 99,
+      "total_loc": 24099,
+      "total_bytes": 690493,
+      "syntax_errors": 0,
+      "parse_time_ms": 149.64,
+      "parse_throughput_loc_sec": 161043,
+      "peak_memory_mb": 4.7
+    },
+    {
+      "repo": "fastapi",
+      "total_files": 1138,
+      "total_loc": 112998,
+      "total_bytes": 3972016,
+      "syntax_errors": 0,
+      "parse_time_ms": 535.81,
+      "parse_throughput_loc_sec": 210890,
+      "peak_memory_mb": 6.89
+    }
+  ],
+  "megarepo_sweeps": [
+    {
+      "scale_target": "1M LOC",
+      "total_files": 8258,
+      "total_loc": 1000101,
+      "workers": 8,
+      "elapsed_seconds": 1.062,
+      "throughput_loc_sec": 941564,
+      "peak_memory_mb": 5.91,
+      "syntax_errors": 0
+    },
+    {
+      "scale_target": "10M LOC",
+      "total_files": 84361,
+      "total_loc": 10000289,
+      "workers": 8,
+      "elapsed_seconds": 8.452,
+      "throughput_loc_sec": 1183157,
+      "peak_memory_mb": 6.59,
+      "syntax_errors": 0
+    }
+  ]
+}
