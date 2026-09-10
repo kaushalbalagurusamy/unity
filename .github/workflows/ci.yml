@@ -8,7 +8,7 @@ on:
 
 jobs:
   test:
-    name: Test Grammar, Schema & Source Anchors
+    name: Test Grammar, Schema, Lowering Engine & Semantic Delta Gate
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -24,6 +24,6 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt
 
-      - name: Run Milestone 0 Quality Gate
+      - name: Run Milestone 0 & Milestone 1 Quality Gate
         run: |
-          pytest -v tests/test_milestone_0.py
+          pytest -v tests/
