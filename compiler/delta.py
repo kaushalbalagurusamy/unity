@@ -240,7 +240,9 @@ class SemanticDeltaEngine:
         self._diff_purity(pre, post, delta)
         self._diff_contract(pre, post, delta)
         self._diff_preconditions(pre, post, delta)
+        self._diff_postconditions(pre, post, delta)
         self._diff_execution_steps(pre, post, delta)
+        self._diff_causal_links(pre, post, delta)
         return delta
 
     def _diff_concurrency(self, pre: SymbolDeclaration, post: SymbolDeclaration, delta: SymbolDelta) -> None:
@@ -329,3 +331,42 @@ class SemanticDeltaEngine:
                 delta.execution_step_diffs.append(f"Step {s1.step_num}: {s1.action} -> {s2.action}")
                 if delta.severity == DeltaSeverity.IDENTICAL:
                     delta.severity = DeltaSeverity.BEHAVIORAL_MUTATION
+
+    def _diff_postconditions(self, pre: SymbolDeclaration, post: SymbolDeclaration, delta: SymbolDelta) -> None:
+        pre_post = {q.id: q.expr for q in pre.postconditions}
+        post_post = {q.id: q.expr for q in post.postconditions}
+
+        for qid, old_expr in pre_post.items():
+            if qid not in post_post:
+                delta.is_one_way_door = True
+                delta.severity = DeltaSeverity.ONE_WAY_DOOR
+                delta.messages.append(f"POSTCONDITION REMOVED: {qid}: {old_expr}")
+            elif old_expr != post_post[qid]:
+                delta.postcondition_diffs.append((old_expr, post_post[qid]))
+                delta.messages.append(f"POSTCONDITION SHIFT: {qid}: '{old_expr}' -> '{post_post[qid]}'")
+                if delta.severity != DeltaSeverity.ONE_WAY_DOOR:
+                    delta.severity = DeltaSeverity.CONTRACT_SHIFT
+
+        for qid, new_expr in post_post.items():
+            if qid not in pre_post:
+                delta.messages.append(f"POSTCONDITION ADDED: {qid}: {new_expr}")
+                if delta.severity == DeltaSeverity.IDENTICAL:
+                    delta.severity = DeltaSeverity.CONTRACT_SHIFT
+
+    def _diff_causal_links(self, pre: SymbolDeclaration, post: SymbolDeclaration, delta: SymbolDelta) -> None:
+        pre_links = {(link.kind, link.target_symbol) for link in pre.causal_topology}
+        post_links = {(link.kind, link.target_symbol) for link in post.causal_topology}
+
+        removed = pre_links - post_links
+        added = post_links - pre_links
+
+        for kind, target in removed:
+            delta.messages.append(f"CAUSAL TOPOLOGY REMOVED: {kind} {target}")
+            if delta.severity == DeltaSeverity.IDENTICAL:
+                delta.severity = DeltaSeverity.STRUCTURAL_CHANGE
+
+        for kind, target in added:
+            delta.messages.append(f"CAUSAL TOPOLOGY ADDED: {kind} {target}")
+            if delta.severity == DeltaSeverity.IDENTICAL:
+                delta.severity = DeltaSeverity.STRUCTURAL_CHANGE
+
