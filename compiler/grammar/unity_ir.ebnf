@@ -1,0 +1,74 @@
+// =============================================================================
+// Unity Intermediate Representation (Unity-IR) Formal EBNF Grammar
+// Compatible with Lark Earley/LALR Parser
+// =============================================================================
+
+start: (_NL* symbol_decl)* _NL*
+
+symbol_decl: "SYMBOL:" canonical_id _NL contract_block _NL* [preconditions_block _NL*] [execution_block _NL*] [postconditions_block _NL*] [causal_block _NL*]
+
+canonical_id: "@" CNAME ("." CNAME)*
+
+contract_block: "CONTRACT:" _NL "  PARAMS:" param_list _NL "  RETURNS:" return_type _NL "  SYSTEMS:" systems_spec
+
+param_list: "(" [param ("," param)*] ")"
+param: CNAME ":" type_spec
+return_type: CNAME ["<" type_arg ("," type_arg)* ">"]
+type_arg: CNAME ["[" union_types "]"] | type_spec
+union_types: CNAME ("|" CNAME)*
+type_spec: CNAME ["<" type_arg ("," type_arg)* ">"]
+
+systems_spec: "[" system_attr ("," system_attr)* "]"
+system_attr: "concurrency:" concurrency_val
+           | "purity:" purity_val
+           | "resource:" resource_val
+
+concurrency_val: "exclusive_lock(" target_ref ")"
+               | "lock_free"
+               | "atomic"
+               | "csp_channel(" target_ref ")"
+
+purity_val: "pure"
+          | "impure(IO)"
+          | "impure(StateMutation:" target_ref ")"
+
+resource_val: "owned"
+            | "mutable_borrow(" type_spec ")"
+            | "shared_borrow(" type_spec ")"
+
+target_ref: CNAME ("." CNAME)*
+mutation_target: CNAME ("." CNAME)* ("[" REST_OF_INDEX "]")?
+REST_OF_INDEX: /[^\]\n\r]+/
+
+preconditions_block: "PRECONDITIONS:" _NL (precondition_line)+
+precondition_line: "  " P_ID ":" REST_OF_LINE _NL
+P_ID: "P" INT
+
+execution_block: "EXECUTION_LOGIC:" _NL (step_line)+
+step_line: "  " INT "." action_stmt _NL ["     " assert_stmt _NL]
+
+action_stmt: "ACQUIRE:" concurrency_val
+           | "RELEASE:" concurrency_val
+           | "QUERY:" target_ref "=" REST_OF_LINE
+           | "EVALUATE:" target_ref "=" REST_OF_LINE
+           | "MUTATE:" mutation_target ":=" REST_OF_LINE
+           | "RETURN:" REST_OF_LINE
+
+assert_stmt: "ASSERT:" ASSERT_COND "ELSE THROW" CNAME
+
+ASSERT_COND: /(?:(?!ELSE THROW).)+/
+REST_OF_LINE: /[^\n\r]+/
+
+postconditions_block: "POSTCONDITIONS:" _NL (postcondition_line)+
+postcondition_line: "  " Q_ID ":" REST_OF_LINE _NL
+Q_ID: "Q" INT
+
+causal_block: "CAUSAL_TOPOLOGY:" _NL (causal_line)+
+causal_line: "  " ("CALLS:" | "CALLED_BY:") canonical_id _NL
+
+_NL: NEWLINE
+%import common.CNAME
+%import common.INT
+%import common.NEWLINE
+%import common.WS_INLINE
+%ignore WS_INLINE

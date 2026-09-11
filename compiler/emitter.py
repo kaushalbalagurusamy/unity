@@ -24,7 +24,17 @@ class CanonicalEmitter:
 
     def __init__(self, grammar_path: Optional[Path] = None) -> None:
         if grammar_path is None:
-            grammar_path = Path(__file__).parent.parent / "grammar" / "unity_ir.ebnf"
+            candidates = [
+                Path(__file__).parent / "grammar" / "unity_ir.ebnf",
+                Path(__file__).parent.parent / "grammar" / "unity_ir.ebnf",
+                Path("/Users/kaushal/Documents/Github/unity/grammar/unity_ir.ebnf"),
+            ]
+            for c in candidates:
+                if c.exists():
+                    grammar_path = c
+                    break
+            else:
+                grammar_path = candidates[0]
         self.grammar_path = grammar_path
         self._lark_parser: Optional[Lark] = None
 
